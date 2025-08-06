@@ -8,3 +8,5 @@ package-lock.json
 *.log
 dist-test/
 debug-test.js
+*.conf
+*wireguard*
