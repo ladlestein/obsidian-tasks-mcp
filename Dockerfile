@@ -27,4 +27,4 @@ EXPOSE 8080
 # Start Syncthing, then the HTTP proxy (which spawns the MCP CLI)
 ENTRYPOINT ["/sbin/tini","--","sh","-c", \
   "syncthing -no-browser -home /data/syncthing & \
-   node /app/dist/http-proxy.js" ]
+   node /app/dist/src/http-proxy.js" ]
