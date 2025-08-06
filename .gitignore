@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+package-lock.json
+.DS_Store
+*.log
+dist-test/
+debug-test.js
