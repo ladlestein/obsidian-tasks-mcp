@@ -1,15 +1,27 @@
 import Fastify from 'fastify';
 import { spawn } from 'child_process';
 import { v4 as uuid } from 'uuid';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
-const TOKEN = process.env.MCP_TOKEN;
+const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN;
+const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE;
 const VAULT_PATH = process.env.VAULT_PATH || '/data/vault';
 
-if (!TOKEN) {
-  console.error('ERROR: MCP_TOKEN environment variable must be set');
+if (!AUTH0_DOMAIN) {
+  console.error('ERROR: AUTH0_DOMAIN environment variable must be set');
   process.exit(1);
 }
+
+if (!AUTH0_AUDIENCE) {
+  console.error('ERROR: AUTH0_AUDIENCE environment variable must be set');
+  process.exit(1);
+}
+
+const issuerBase = (/^https?:\/\//.test(AUTH0_DOMAIN) ? AUTH0_DOMAIN : `https://${AUTH0_DOMAIN}`)
+  .replace(/\/+$/, '');
+const issuer = `${issuerBase}/`;
+const jwks = createRemoteJWKSet(new URL(`${issuerBase}/.well-known/jwks.json`));
 
 /* ── spawn the existing MCP server ───────────────── */
 const mcp = spawn('node', ['dist/src/index.js', VAULT_PATH], {
@@ -46,8 +58,22 @@ function callMCP(msg: unknown): Promise<unknown> {
 const app = Fastify();
 
 app.addHook('onRequest', async (req, res) => {
-  if (req.headers.authorization !== `Bearer ${TOKEN}`) {
-    res.code(401).send({ error: 'unauthorized' });
+  const authorization = req.headers.authorization;
+  if (!authorization?.startsWith('Bearer ')) {
+    res.code(401);
+    return res.send({ error: 'missing bearer token' });
+  }
+
+  const token = authorization.slice('Bearer '.length).trim();
+  try {
+    await jwtVerify(token, jwks, {
+      issuer,
+      audience: AUTH0_AUDIENCE,
+    });
+  } catch (err) {
+    console.error('JWT verification failed', err);
+    res.code(401);
+    return res.send({ error: 'invalid token' });
   }
 });
 
