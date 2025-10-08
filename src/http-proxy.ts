@@ -28,10 +28,22 @@ const mcp = spawn('node', ['dist/src/index.js', VAULT_PATH], {
   stdio: ['pipe', 'pipe', 'inherit'], // stdin, stdout, stderr
 });
 
+mcp.once('exit', (code, signal) => {
+  console.error(
+    `MCP server exited${code !== null ? ` with code ${code}` : ''}${signal ? ` (signal ${signal})` : ''}`,
+  );
+  process.exit(code ?? 1);
+});
+
+mcp.once('error', (error) => {
+  console.error('Failed to start MCP server:', error);
+  process.exit(1);
+});
+
+/* read replies line-by-line */
 type Resolver = (msg: unknown) => void;
 const pending = new Map<string, Resolver>();
 
-/* read replies line-by-line */
 mcp.stdout.setEncoding('utf8').on('data', (chunk) => {
   chunk.split('\n').filter(Boolean).forEach((line: string) => {
     try {
@@ -78,6 +90,11 @@ app.addHook('onRequest', async (req, res) => {
 });
 
 app.post('/mcp', async (req, res) => {
+  if (!req.body || typeof req.body !== 'object') {
+    res.code(400);
+    return res.send({ error: 'invalid JSON body' });
+  }
+
   const reply = await callMCP(req.body);
   res.send(reply);
 });

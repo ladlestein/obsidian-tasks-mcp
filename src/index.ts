@@ -44,12 +44,12 @@ if (process.env.NODE_ENV !== 'test') {
   try {
     const stats = await fs.stat(vaultDirectory);
     if (!stats.isDirectory()) {
-      console.error(`Error: ${args[0]} is not a directory`);
-      process.exit(1);
+      throw new Error(`Not a directory: ${args[0] ?? vaultDirectory}`);
     }
   } catch (error) {
-    console.error(`Error accessing directory ${args[0]}:`, error);
-    process.exit(1);
+    console.error(`Error accessing vault directory ${args[0] ?? vaultDirectory}:`, error);
+    console.error('Set VAULT_PATH (or pass a path argument) to a readable Obsidian vault.');
+    process.exit(0);
   }
 }
 
