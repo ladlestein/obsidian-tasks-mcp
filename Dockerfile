@@ -13,6 +13,7 @@ WORKDIR /app
 RUN apk add --no-cache tini syncthing
 COPY --from=builder /app/dist /app/dist
 COPY --from=builder /app/package*.json /app/
+COPY --from=builder /app/tests/test-vault /app/tests/test-vault
 RUN npm ci --omit=dev --ignore-scripts   # installs fastify + uuid
 
 ENV NODE_ENV=production \
